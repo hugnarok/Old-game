@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Jogo da Velha</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 50px;
+    }
+    h1 {
+      color: #333;
+    }
+    #board {
+      display: grid;
+      grid-template-columns: repeat(3, 100px);
+      gap: 4px;
+      margin-top: 20px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+    .cell {
+      width: 100px;
+      height: 100px;
+      border: 2px solid #333;
+      font-size: 36px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background-color: #eee;
+    }
+    #reset-button {
+      margin-top: 20px;
+      font-size: 16px;
+      padding: 10px 20px;
+      cursor: pointer;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+    }
+    #score-container {
+      margin-top: 20px;
+      display: inline-block;
+    }
+    #score-table {
+      border-collapse: collapse;
+      margin: 0 auto;
+    }
+    #score-table th, #score-table td {
+      padding: 10px;
+      border: 1px solid #ddd;
+      text-align: center;
+    }
+  </style>
+</head>
+<body>
+
+<h1>Jogo da Velha</h1>
+<div id="board"></div>
+<button id="reset-button">Reiniciar Jogo</button>
+<div id="score-container">
+  <table id="score-table">
+    <tr>
+      <th>Jogador X</th>
+      <th>Jogador O</th>
+    </tr>
+    <tr>
+      <td id="score-x">0</td>
+      <td id="score-o">0</td>
+    </tr>
+  </table>
+</div>
+
+<script>
+  const board = document.getElementById('board');
+  const resetButton = document.getElementById('reset-button');
+  const scoreXDisplay = document.getElementById('score-x');
+  const scoreODisplay = document.getElementById('score-o');
+  const cells = [];
+  let currentPlayer = 'X';
+  let gameActive = true;
+  let scores = {
+    'X': 0,
+    'O': 0
+  };
+
+  // Cria as células do tabuleiro
+  for (let i = 0; i < 9; i++) {
+    const cell = document.createElement('div');
+    cell.className = 'cell';
+    cell.dataset.index = i;
+    cell.addEventListener('click', handleCellClick);
+    board.appendChild(cell);
+    cells.push(cell);
+  }
+
+  // Adiciona evento de clique ao botão de reset
+  resetButton.addEventListener('click', resetGame);
+
+  // Função chamada quando uma célula é clicada
+  function handleCellClick(event) {
+    if (!gameActive) return;
+
+    const cell = event.target;
+    const index = cell.dataset.index;
+
+    // Verifica se a célula está vazia
+    if (cells[index].textContent === '') {
+      cells[index].textContent = currentPlayer;
+
+      // Verifica se há um vencedor
+      if (checkWinner()) {
+        alert(`Jogador ${currentPlayer} venceu!`);
+        scores[currentPlayer]++;
+        updateScoreDisplay();
+        gameActive = false;
+      } else if (checkDraw()) {
+        alert('Empate! O jogo acabou.');
+        gameActive = false;
+      } else {
+        // Troca o jogador atual
+        currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+
+        // Se o jogo ainda estiver ativo, é a vez do robô jogar
+        if (gameActive && currentPlayer === 'O') {
+          setTimeout(robotMove, 500); // Adiciona um pequeno atraso para que seja mais visível que é o robô jogando
+        }
+      }
+    }
+  }
+
+  // Função para verificar se há um vencedor
+  function checkWinner() {
+    const winPatterns = [
+      [0, 1, 2], [3, 4, 5], [6, 7, 8], // Linhas
+      [0, 3, 6], [1, 4, 7], [2, 5, 8], // Colunas
+      [0, 4, 8], [2, 4, 6]              // Diagonais
+    ];
+
+    for (const pattern of winPatterns) {
+      const [a, b, c] = pattern;
+      if (cells[a].textContent !== '' && cells[a].textContent === cells[b].textContent && cells[a].textContent === cells[c].textContent) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  // Função para verificar se há um empate
+  function checkDraw() {
+    return cells.every(cell => cell.textContent !== '');
+  }
+
+  // Função para reiniciar o jogo
+  function resetGame() {
+    for (const cell of cells) {
+      cell.textContent = '';
+    }
+    currentPlayer = 'X';
+    gameActive = true;
+  }
+
+  // Função para atualizar a exibição do placar
+  function updateScoreDisplay() {
+    scoreXDisplay.textContent = scores['X'];
+    scoreODisplay.textContent = scores['O'];
+  }
+
+  // Função para a jogada do robô (escolhe aleatoriamente uma célula vazia)
+  function robotMove() {
+  const emptyCells = cells.filter(cell => cell.textContent === '');
+
+  if (emptyCells.length > 0 && currentPlayer === 'O' && gameActive) {
+    let bestScore = -Infinity;
+    let bestMove;
+
+    // Simula todas as jogadas possíveis e escolhe a melhor
+    for (const cell of emptyCells) {
+      const index = parseInt(cell.dataset.index);
+      cells[index].textContent = currentPlayer;
+      const score = minimax(0, false);
+      cells[index].textContent = '';
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestMove = index;
+      }
+    }
+
+    cells[bestMove].textContent = currentPlayer;
+
+    if (checkWinner()) {
+      alert('Jogador O (Robô) venceu!');
+      scores[currentPlayer]++;
+      updateScoreDisplay();
+      gameActive = false;
+    } else if (checkDraw()) {
+      alert('Empate! O jogo acabou.');
+      gameActive = false;
+    } else {
+      currentPlayer = 'X';
+    }
+  }
+}
+
+// Função Minimax para a tomada de decisão do robô
+function minimax(depth, isMaximizing) {
+  const scores = {
+    X: -1,
+    O: 1,
+    tie: 0
+  };
+
+  if (checkWinner()) {
+    return scores[currentPlayer];
+  }
+
+  if (checkDraw()) {
+    return scores.tie;
+  }
+
+  if (isMaximizing) {
+    let bestScore = -Infinity;
+    for (const cell of cells) {
+      if (cell.textContent === '') {
+        const index = parseInt(cell.dataset.index);
+        cells[index].textContent = 'O';
+        bestScore = Math.max(bestScore, minimax(depth + 1, false));
+        cells[index].textContent = '';
+      }
+    }
+    return bestScore;
+  } else {
+    let bestScore = Infinity;
+    for (const cell of cells) {
+      if (cell.textContent === '') {
+        const index = parseInt(cell.dataset.index);
+        cells[index].textContent = 'X';
+        bestScore = Math.min(bestScore, minimax(depth + 1, true));
+        cells[index].textContent = '';
+      }
+    }
+    return bestScore;
+  }
+}
+</script>
+
+</body>
+</html>
